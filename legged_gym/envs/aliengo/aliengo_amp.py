@@ -235,7 +235,7 @@ class AliengoAMP(LeggedRobot):
              lin_vel_x *= torch.abs(torch.tensor(self.command_ranges["lin_vel_x"][1]))
             else:
              lin_vel_x *= torch.abs(torch.tensor(self.command_ranges["lin_vel_x"][0]))
-
+            
             lin_vel_y = -1 * self._p1.get_axis(3)
             if lin_vel_y >= 0:
              lin_vel_y *= torch.abs(torch.tensor(self.command_ranges["lin_vel_y"][1]))
@@ -248,14 +248,22 @@ class AliengoAMP(LeggedRobot):
             else:
              ang_vel *= torch.abs(torch.tensor(self.command_ranges["ang_vel_yaw"][0]))
 
-            self.commands[:, 0] = lin_vel_x
-            self.commands[:, 1] = lin_vel_y
-            self.commands[:, 2] = ang_vel
+        self.commands[:, 0] = 1.5 # линейная скорость по X
+        self.commands[:, 1] = 0.0 # линейная скорость по Y
+        self.commands[:, 2] = 0.0
 
-        self.privileged_obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
-                                    self.base_ang_vel  * self.obs_scales.ang_vel,
+        # self.privileged_obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
+        #                             self.base_ang_vel  * self.obs_scales.ang_vel,
+        #                             self.projected_gravity,
+        #                             self.commands[:, :3] * self.commands_scale,
+        #                             (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
+        #                             self.dof_vel * self.obs_scales.dof_vel,
+        #                             self.actions
+        #                             ),dim=-1)
+        self.privileged_obs_buf = torch.cat((  self.base_lin_vel,
+                                    self.base_ang_vel,
                                     self.projected_gravity,
-                                    self.commands[:, :3] * self.commands_scale,
+                                    self.commands[:, :3],
                                     (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     self.dof_vel * self.obs_scales.dof_vel,
                                     self.actions
