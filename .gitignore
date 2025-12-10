@@ -1,1 +1,28 @@
-logs
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+
+# Build / dist
+build/
+dist/
+*.egg-info/
+
+# Logs and outputs
+logs/aliengo_residual/
+logs_*/
+*.log
+
+# Torch/Isaac artifacts
+.cache/
+*.pt
+
+# IDE
+.vscode/
+.idea/
+
+# Keep environment.yml tracked; ignore other env files
+!environment.yml

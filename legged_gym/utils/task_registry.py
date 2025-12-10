@@ -37,7 +37,7 @@ import numpy as np
 # ! different algorithms
 from rl.env import VecEnv
 from rl.rl_algorithms.encode_vel.runners import OnPolicyRunner, EncodeVelAMPOnPolicyRunner
-from rl.rl_algorithms.proprio_base.runners import OnPolicyRunner, ProprioBaseAMPOnPolicyRunner, ProprioBaseNavOnPolicyRunner
+from rl.rl_algorithms.proprio_base.runners import OnPolicyRunner, ProprioBaseAMPOnPolicyRunner, ProprioBaseNavOnPolicyRunner, ResidualOnPolicyRunner
 
 from legged_gym import LEGGED_GYM_ROOT_DIR, LEGGED_GYM_ENVS_DIR
 from .helpers import get_args, update_cfg_from_args, class_to_dict, get_load_path, get_load_path_nav, set_seed, parse_sim_params
@@ -157,16 +157,20 @@ class TaskRegistry():
 
             if args.locomotion_policy_experiment_name != 'debug':
                 save_item_config = os.path.join(LEGGED_GYM_ROOT_DIR, 'legged_gym', 'envs', name.rstrip('_nav'), name + '_config.py')
-                copyfile(save_item_config, log_dir + '/nav_config.py')
+                if os.path.exists(save_item_config):
+                    copyfile(save_item_config, log_dir + '/nav_config.py')
 
                 save_item_specific_env = os.path.join(LEGGED_GYM_ROOT_DIR, 'legged_gym', 'envs', name.rstrip('_nav'), name + '.py')
-                copyfile(save_item_specific_env, log_dir + '/' + name + '.py')
+                if os.path.exists(save_item_specific_env):
+                    copyfile(save_item_specific_env, log_dir + '/' + name + '.py')
             else:
                 save_item_config = os.path.join(LEGGED_GYM_ROOT_DIR, 'legged_gym', 'envs', name.rstrip('_amp'), name + '_config.py')
-                copyfile(save_item_config, log_dir + '/amp_config.py')
+                if os.path.exists(save_item_config):
+                    copyfile(save_item_config, log_dir + '/amp_config.py')
 
                 save_item_specific_env = os.path.join(LEGGED_GYM_ROOT_DIR, 'legged_gym', 'envs', name.rstrip('_amp'), name + '.py')
-                copyfile(save_item_specific_env, log_dir + '/' + name + '.py')
+                if os.path.exists(save_item_specific_env):
+                    copyfile(save_item_specific_env, log_dir + '/' + name + '.py')
 
         # print(train_cfg.runner_class_name)
         runner_class = eval(train_cfg.runner_class_name)

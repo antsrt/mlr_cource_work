@@ -30,3 +30,4 @@
 
 from .ppo import PPO
 from .amp_ppo import AMPPPO
+from .residual_ppo import ResidualPPO

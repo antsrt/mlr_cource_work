@@ -176,7 +176,7 @@ def update_cfg_from_args(env_cfg, cfg_train, args):
             cfg_train.runner.export_policy = args.export_policy
         if args.export_onnx_policy:
             cfg_train.runner.export_onnx_policy = args.export_onnx_policy
-        if args.runner_class_name:
+        if args.runner_class_name and args.runner_class_name != "debug":
             cfg_train.runner_class_name = args.runner_class_name
     return env_cfg, cfg_train
 

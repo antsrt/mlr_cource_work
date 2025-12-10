@@ -66,6 +66,8 @@ class AliengoAMP(LeggedRobot):
         """
         clip_actions = self.cfg.normalization.clip_actions
         self.actions = torch.clip(actions, -clip_actions, clip_actions).to(self.device)
+        # Hook for external residuals: added after clipping, before scaling.
+        self.actions = self.actions + self.action_residual
         # step physics and render each frame
         self.render()
         for _ in range(self.cfg.control.decimation):
@@ -314,7 +316,4 @@ class AliengoAMP(LeggedRobot):
         joint_vel = self.dof_vel
         z_pos = self.root_states[:, 2:3]
         return torch.cat((joint_pos, foot_pos, base_lin_vel, base_ang_vel, joint_vel, z_pos), dim=-1)
-
-
-
 

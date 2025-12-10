@@ -101,6 +101,12 @@ class PPO:
         self.transition.actions_log_prob = self.actor_critic.get_actions_log_prob(self.transition.actions).detach()
         self.transition.action_mean = self.actor_critic.action_mean.detach()
         self.transition.action_sigma = self.actor_critic.action_std.detach()
+        # Store base action stats if available (for KL regularization)
+        if hasattr(self.actor_critic, "base_action_mean"):
+            self.transition.base_action_mean = getattr(self.actor_critic, "base_action_mean").detach()
+            self.transition.base_action_sigma = getattr(self.actor_critic, "base_action_std", None)
+            if self.transition.base_action_sigma is not None:
+                self.transition.base_action_sigma = self.transition.base_action_sigma.detach()
         # need to record obs and critic_obs before env.step()
         self.transition.observations = obs_dict['obs']
         self.transition.critic_observations = obs_dict['privileged_obs']

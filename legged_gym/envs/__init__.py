@@ -35,6 +35,7 @@ from .a1.a1_config import A1RoughCfg, A1RoughCfgPPO
 from .a1.a1_amp_config import A1AMPCfg, A1AMPCfgPPO
 
 from .aliengo.aliengo_amp_config import AliengoAMPCfg, AliengoAMPCfgPPO
+from .aliengo.aliengo_residual_config import AliengoResidualCfg, AliengoResidualCfgPPO
 from .aliengo.aliengo_amp import AliengoAMP
 
 # from .aliengo.aliengo_nav_config import AliengoNavCfg, AliengoNavCfgPPO
@@ -47,4 +48,5 @@ from legged_gym.utils.task_registry import task_registry
 task_registry.register( "a1", LeggedRobot, A1RoughCfg(), A1RoughCfgPPO() )
 task_registry.register( "a1_amp", LeggedRobot, A1AMPCfg(), A1AMPCfgPPO() )
 task_registry.register( "aliengo_amp", AliengoAMP, AliengoAMPCfg(), AliengoAMPCfgPPO() )
+task_registry.register( "aliengo_residual", AliengoAMP, AliengoResidualCfg(), AliengoResidualCfgPPO() )
 # task_registry.register( "aliengo_nav", AliengoNav, AliengoNavCfg(), AliengoNavCfgPPO() )

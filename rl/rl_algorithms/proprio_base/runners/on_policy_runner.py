@@ -74,7 +74,8 @@ class OnPolicyRunner:
         self.save_interval = self.cfg["save_interval"]
 
         # init storage and model
-        self.alg.init_storage(self.env.num_envs, self.num_steps_per_env, [self.env.num_obs], [self.env.num_privileged_obs], [self.env.num_actions])
+        hist_shape = [self.env.num_obs * self.env.include_history_steps] if self.env.include_history_steps is not None else [self.env.num_obs]
+        self.alg.init_storage(self.env.num_envs, self.num_steps_per_env, [self.env.num_obs], [self.env.num_privileged_obs], [self.env.num_actions], hist_shape)
 
         # Log
         self.log_dir = log_dir
@@ -83,7 +84,7 @@ class OnPolicyRunner:
         self.tot_time = 0
         self.current_learning_iteration = 0
 
-        _, _ = self.env.reset()
+        self.env.reset()
     
     def learn(self, num_learning_iterations, init_at_random_ep_len=False):
         # initialize writer
@@ -91,10 +92,10 @@ class OnPolicyRunner:
             self.writer = SummaryWriter(log_dir=self.log_dir, flush_secs=10)
         if init_at_random_ep_len:
             self.env.episode_length_buf = torch.randint_like(self.env.episode_length_buf, high=int(self.env.max_episode_length))
-        obs = self.env.get_observations()
-        privileged_obs = self.env.get_privileged_observations()
-        critic_obs = privileged_obs if privileged_obs is not None else obs
-        obs, critic_obs = obs.to(self.device), critic_obs.to(self.device)
+        obs_dict = self.env.get_observations()
+        obs = obs_dict['obs'].to(self.device)
+        critic_obs = obs_dict['privileged_obs'].to(self.device) if obs_dict['privileged_obs'] is not None else obs
+        obs_dict_device = {'obs': obs, 'privileged_obs': critic_obs, 'proprio_hist': obs_dict['proprio_hist'].to(self.device)}
         self.alg.actor_critic.train() # switch to train mode (for dropout for example)
 
         ep_infos = []
@@ -109,10 +110,12 @@ class OnPolicyRunner:
             # Rollout
             with torch.inference_mode():
                 for i in range(self.num_steps_per_env):
-                    actions = self.alg.act(obs, critic_obs)
-                    obs, privileged_obs, rewards, dones, infos, _, _ = self.env.step(actions)
-                    critic_obs = privileged_obs if privileged_obs is not None else obs
-                    obs, critic_obs, rewards, dones = obs.to(self.device), critic_obs.to(self.device), rewards.to(self.device), dones.to(self.device)
+                    actions = self.alg.act(obs_dict_device)
+                    obs_dict, rewards, dones, infos, _, _ = self.env.step(actions)
+                    obs = obs_dict['obs'].to(self.device)
+                    critic_obs = obs_dict['privileged_obs'].to(self.device) if obs_dict['privileged_obs'] is not None else obs
+                    obs_dict_device = {'obs': obs, 'privileged_obs': critic_obs, 'proprio_hist': obs_dict['proprio_hist'].to(self.device)}
+                    rewards, dones = rewards.to(self.device), dones.to(self.device)
                     self.alg.process_env_step(rewards, dones, infos)
                     
                     if self.log_dir is not None:
@@ -132,7 +135,7 @@ class OnPolicyRunner:
 
                 # Learning step
                 start = stop
-                self.alg.compute_returns(critic_obs)
+                self.alg.compute_returns(obs_dict_device)
             
             mean_value_loss, mean_surrogate_loss = self.alg.update()
             stop = time.time()

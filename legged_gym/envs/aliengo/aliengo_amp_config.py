@@ -28,14 +28,16 @@
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 import glob
+import os
 
+from legged_gym import LEGGED_GYM_ROOT_DIR
 from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
 
 # Берём доступные AMP-траектории: сначала целевой датасет, если он пустой — фолбэки.
 MOTION_FILES = (
-    glob.glob('datasets/mocap_motions_go1_video_gen_m10/*')
-    or glob.glob('datasets/video_motion_limp_aliengo/*')
-    or glob.glob('datasets/mocap_motions/*')
+    glob.glob(os.path.join(LEGGED_GYM_ROOT_DIR, 'datasets/mocap_motions_go1_video_gen_m10/*'))
+    or glob.glob(os.path.join(LEGGED_GYM_ROOT_DIR, 'datasets/video_motion_limp_aliengo/*'))
+    or glob.glob(os.path.join(LEGGED_GYM_ROOT_DIR, 'datasets/mocap_motions/*'))
 )
 
 
@@ -222,4 +224,3 @@ class AliengoAMPCfgPPO( LeggedRobotCfgPPO ):
 
         export_policy = False
         export_onnx_policy = False
-
