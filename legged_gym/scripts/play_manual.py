@@ -28,7 +28,7 @@ def control_cmd(step: int, max_steps: int) -> Tuple[float, float, float]:
         (lin_vel_x, lin_vel_y, ang_vel_yaw)
     """
     # Example: constant forward command with zero yaw.
-    lin_x = 1.5  # m/s
+    lin_x = 1.0  # m/s
     lin_y = 0.0  # m/s
     yaw_rate = 0.0  # rad/s
     return lin_x, lin_y, yaw_rate
