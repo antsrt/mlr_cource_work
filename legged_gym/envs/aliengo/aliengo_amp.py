@@ -316,4 +316,3 @@ class AliengoAMP(LeggedRobot):
         joint_vel = self.dof_vel
         z_pos = self.root_states[:, 2:3]
         return torch.cat((joint_pos, foot_pos, base_lin_vel, base_ang_vel, joint_vel, z_pos), dim=-1)
-

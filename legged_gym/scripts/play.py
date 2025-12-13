@@ -55,7 +55,7 @@ def play(args):
 
     train_cfg.runner.amp_num_preload_transitions = 1
 
-    # prepare environment
+    # prepare environment   
     env, _ = task_registry.make_env(name=args.task, args=args, env_cfg=env_cfg)
     _ = env.reset()
     obs_dict = env.get_observations()

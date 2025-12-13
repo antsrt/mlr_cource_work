@@ -38,13 +38,14 @@ MOTION_FILES = (
     glob.glob(os.path.join(LEGGED_GYM_ROOT_DIR, 'datasets/mocap_motions_go1_video_gen_m10/*'))
     or glob.glob(os.path.join(LEGGED_GYM_ROOT_DIR, 'datasets/video_motion_limp_aliengo/*'))
     or glob.glob(os.path.join(LEGGED_GYM_ROOT_DIR, 'datasets/mocap_motions/*'))
+
 )
 
 
 class AliengoAMPCfg( LeggedRobotCfg ):
 
     class env( LeggedRobotCfg.env ):
-        num_envs = 4096
+        num_envs = 4048
         include_history_steps = 4  # Number of steps of history to include.
         num_observations = 45
         num_privileged_obs = 48
@@ -151,8 +152,26 @@ class AliengoAMPCfg( LeggedRobotCfg ):
         soft_dof_pos_limit = 0.9
         base_height_target = 0.25
         class scales( LeggedRobotCfg.rewards.scales ):
+            # termination = 0.0
+            # tracking_lin_vel = 1.5 * 1. / (.005 * 6)
+            # tracking_ang_vel = 0.5 * 1. / (.005 * 6)
+            # lin_vel_z = 0.0
+            # ang_vel_xy = 0.0
+            # orientation = 0.0
+            # torques = -0.00001 * 1. / (.005 * 6)
+            # dof_vel = 0.0
+            # dof_acc = -2.5e-7 * 1. / (.005 * 6)
+            # base_height = 0.0
+            # feet_air_time =  1.0 * 1. / (.005 * 6)
+            # collision = 0.0
+            # feet_stumble = 0.0
+            # action_rate = 0.0
+            # stand_still = 0.0
+            # dof_pos_limits = 0.0
+
+            # feet_jump_high = 2.4 * 1. / (.005 * 6)
             termination = 0.0
-            tracking_lin_vel = 1.5 * 1. / (.005 * 6)
+            tracking_lin_vel = 3.0 * 1. / (.005 * 6)
             tracking_ang_vel = 0.5 * 1. / (.005 * 6)
             lin_vel_z = 0.0
             ang_vel_xy = 0.0
@@ -175,9 +194,13 @@ class AliengoAMPCfg( LeggedRobotCfg ):
         curriculum = False
         max_curriculum = 1.
         num_commands = 4 # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
-        resampling_time = 10. # time before command are changed[s]
+        resampling_time = 10. # time before command are changed[s]lin_vel_x
         heading_command = False # if true: compute ang vel command from heading error
         class ranges:
+            # lin_vel_x = [-1.0, 2.4] # min max [m/s]
+            # lin_vel_y = [-0.3, 0.3]   # min max [m/s]
+            # ang_vel_yaw = [-1.57, 1.57]    # min max [rad/s]
+            # heading = [-3.14, 3.14]
             lin_vel_x = [-1.0, 2.4] # min max [m/s]
             lin_vel_y = [-0.3, 0.3]   # min max [m/s]
             ang_vel_yaw = [-1.57, 1.57]    # min max [rad/s]
@@ -210,17 +233,17 @@ class AliengoAMPCfgPPO( LeggedRobotCfgPPO ):
         policy_class_name = 'ActorCritic'
         max_iterations = 25000 # number of policy updates
 
-        amp_reward_coef = 2.0
+        amp_reward_coef = 0.9
         amp_motion_files = MOTION_FILES
         amp_num_preload_transitions = 2000000
-        amp_task_reward_lerp = 0.2
+        amp_task_reward_lerp = 0.6
         amp_discr_hidden_dims = [1024, 512]
 
         min_normalized_std = [0.01, 0.01, 0.01] * 4
 
         load_run = -1
 
-        checkpoint_model = None # load pre-trained model name
+        checkpoint_model = "./logs/aliengo_amp/video_limp/model_25000.pt" # load pre-trained model name
 
         export_policy = False
         export_onnx_policy = False
