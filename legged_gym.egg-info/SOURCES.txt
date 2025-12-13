@@ -1,4 +1,5 @@
 LICENSE
+README.md
 setup.py
 aliengo_gym_deploy/__init__.py
 aliengo_gym_deploy/setup.py

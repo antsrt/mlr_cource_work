@@ -11,8 +11,6 @@ from typing import Tuple
 import isaacgym
 import numpy as np
 import torch
-import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from legged_gym import LEGGED_GYM_ROOT_DIR
@@ -30,7 +28,7 @@ def control_cmd(step: int, max_steps: int) -> Tuple[float, float, float]:
         (lin_vel_x, lin_vel_y, ang_vel_yaw)
     """
     # Example: constant forward command with zero yaw.
-    lin_x = 2.0  # m/s
+    lin_x = 1.5  # m/s
     lin_y = 0.0  # m/s
     yaw_rate = 0.0  # rad/s
     return lin_x, lin_y, yaw_rate
@@ -57,7 +55,7 @@ def play_manual(args):
 
     # AMP data preload kept minimal for inference.
     train_cfg.runner.amp_num_preload_transitions = 1
-    train_cfg.runner.resume = True  # always load policy weights
+    train_cfg.runner.resume = True  # load policy weights via args/load_run
     # Prevent CLI default ("debug") from overwriting runner class in cfg.
     args.runner_class_name = None
 
@@ -71,16 +69,34 @@ def play_manual(args):
 
     obs_dict = env.reset()
 
-    # Лог для сравнения команд и фактических скоростей.
-    log_lin_vel = []
-    log_ang_vel = []
-    log_cmds = []
+    # Логгер для визуализации графиков.
+    from legged_gym.utils import Logger
+    logger = Logger(env.dt)
+    selected_joint_names = [
+        "FR_calf_joint", "FL_calf_joint", "RR_calf_joint", "RL_calf_joint",
+        "FR_thigh_joint", "FL_thigh_joint", "RR_thigh_joint", "RL_thigh_joint",
+    ]
+    dof_names = list(getattr(env, 'dof_names', []))
+    selected_dof_indices = []
+    missing = []
+    for n in selected_joint_names:
+        if n in dof_names:
+            selected_dof_indices.append(dof_names.index(n))
+        else:
+            missing.append(n)
+    if len(missing) > 0:
+        print("Logger selection warning, some requested joints not found in env.dof_names:", missing)
+    logger.log_state('dof_names_sel', selected_joint_names)
+    robot_index = 0
+    stop_state_log = 1000
+    stop_rew_log = env.max_episode_length + 1
 
     # Manual residual hook: set this to shape (num_envs, num_actions).
     env.action_residual[:] = 0.0
 
     ppo_runner, train_cfg = task_registry.make_alg_runner(
         env=env, name=args.task, args=args, train_cfg=train_cfg)
+
     policy = ppo_runner.get_inference_policy(device=env.device)
 
     max_steps = int(1 * env.max_episode_length)
@@ -91,14 +107,12 @@ def play_manual(args):
     env.commands[:, 2] = yaw_rate
     env.compute_observations()
     obs_dict = env.get_observations()
-    for step in range(max_steps):
-        # Per-episode step to avoid slow global ramps.
+    for i in range(10 * int(env.max_episode_length)):
         ep_step = int(env.episode_length_buf[0].item())
         lin_x, lin_y, yaw_rate = control_cmd(ep_step, env.max_episode_length)
         env.commands[:, 0] = lin_x
         env.commands[:, 1] = lin_y
         env.commands[:, 2] = yaw_rate
-        # Example manual residual: keep zero unless you want to adjust actions.
         # env.action_residual[:, :] = torch.tensor([...], device=env.device)
         env.compute_observations()
         obs_dict = env.get_observations()
@@ -106,43 +120,54 @@ def play_manual(args):
         actions = policy(obs_dict)
         obs_dict, rews, dones, infos, _, _ = env.step(actions.detach())
 
-        # Сбор логов: фактические и целевые скорости.
-        log_lin_vel.append(env.base_lin_vel[0, :2].cpu().numpy())
-        log_ang_vel.append(env.base_ang_vel[0, 2].cpu().numpy())
-        log_cmds.append(env.commands[0, :3].cpu().numpy())
+        # Логгирование данных для графиков
+        try:
+            full_tgt = (actions[robot_index].detach().cpu().numpy() * env.cfg.control.action_scale)
+        except Exception:
+            full_tgt = (actions[robot_index].cpu().numpy() * env.cfg.control.action_scale)
+        try:
+            full_pos = env.dof_pos[robot_index].detach().cpu().numpy() if hasattr(env.dof_pos[robot_index], 'detach') else env.dof_pos[robot_index].cpu().numpy()
+        except Exception:
+            full_pos = np.array(env.dof_pos[robot_index])
+        try:
+            full_vel = env.dof_vel[robot_index].detach().cpu().numpy() if hasattr(env.dof_vel[robot_index], 'detach') else env.dof_vel[robot_index].cpu().numpy()
+        except Exception:
+            full_vel = np.array(env.dof_vel[robot_index])
+        try:
+            full_torque = env.torques[robot_index].detach().cpu().numpy() if hasattr(env.torques[robot_index], 'detach') else env.torques[robot_index].cpu().numpy()
+        except Exception:
+            full_torque = np.array(env.torques[robot_index])
 
-        # Optional: print rewards when an episode ends.
-        if infos.get("episode") and torch.sum(env.reset_buf).item() > 0:
-            print(f"Step {step}: episode rewards {infos['episode']}")
+        sel_tgt = np.array([full_tgt[idx] for idx in selected_dof_indices]) if len(selected_dof_indices) > 0 else np.array([])
+        sel_pos = np.array([full_pos[idx] for idx in selected_dof_indices]) if len(selected_dof_indices) > 0 else np.array([])
+        sel_vel = np.array([full_vel[idx] for idx in selected_dof_indices]) if len(selected_dof_indices) > 0 else np.array([])
+        sel_torque = np.array([full_torque[idx] for idx in selected_dof_indices]) if len(selected_dof_indices) > 0 else np.array([])
 
-    # Построить и сохранить графики ошибок после прогона.
-    if len(log_cmds) > 0:
-        log_lin_vel = np.stack(log_lin_vel)
-        log_ang_vel = np.stack(log_ang_vel)
-        log_cmds = np.stack(log_cmds)
-
-        fig, axes = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
-
-        t = np.arange(len(log_cmds))
-        axes[0].plot(t, log_cmds[:, 0], label="cmd lin x", linestyle="--")
-        axes[0].plot(t, log_cmds[:, 1], label="cmd lin y", linestyle="--")
-        axes[0].plot(t, log_lin_vel[:, 0], label="meas lin x")
-        axes[0].plot(t, log_lin_vel[:, 1], label="meas lin y")
-        axes[0].set_ylabel("Linear vel (m/s)")
-        axes[0].legend()
-        axes[0].grid(True)
-
-        axes[1].plot(t, log_cmds[:, 2], label="cmd yaw", linestyle="--")
-        axes[1].plot(t, log_ang_vel, label="meas yaw")
-        axes[1].set_ylabel("Yaw vel (rad/s)")
-        axes[1].set_xlabel("Step")
-        axes[1].legend()
-        axes[1].grid(True)
-
-        out_path = os.path.join(LEGGED_GYM_ROOT_DIR, "logs", "vel_tracking.png")
-        plt.tight_layout()
-        plt.savefig(out_path)
-        print(f"Saved velocity tracking plot to {out_path}")
+        logger.log_states(
+            {
+                'dof_pos_target': sel_tgt,
+                'dof_pos': sel_pos,
+                'dof_vel': sel_vel,
+                'dof_torque': sel_torque,
+                'command_x': env.commands[robot_index, 0].item(),
+                'command_y': env.commands[robot_index, 1].item(),
+                'command_yaw': env.commands[robot_index, 2].item(),
+                'base_vel_x': env.base_lin_vel[robot_index, 0].item(),
+                'base_vel_y': env.base_lin_vel[robot_index, 1].item(),
+                'base_vel_z': env.base_lin_vel[robot_index, 2].item(),
+                'base_vel_yaw': env.base_ang_vel[robot_index, 2].item(),
+                'contact_forces_z': env.contact_forces[robot_index, env.feet_indices, 2].cpu().numpy()
+            }
+        )
+        if i == stop_state_log:
+            logger.plot_states()
+        if 0 < i < stop_rew_log:
+            if infos.get("episode"):
+                num_episodes = torch.sum(env.reset_buf).item()
+                if num_episodes > 0:
+                    logger.log_rewards(infos["episode"], num_episodes)
+        elif i == stop_rew_log:
+            logger.print_rewards()
 
 
 if __name__ == "__main__":
