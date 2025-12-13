@@ -100,7 +100,8 @@ def play(args):
     # --- speed ramp settings: change linear X command starting at t = ramp_start_s ---
     ramp_start_s = 5.0
     ramp_duration_s = 3.0
-    target_lin_vel_x = 1.0
+    initial_lin_vel = 0.4  # начальная скорость [m/s]
+    target_lin_vel_x = 1.4  # целевая скорость [m/s]
     # disable joystick input (if present) and automatic resampling so our manual commands persist
     try:
         if hasattr(env, '_get_commands_from_joystick'):
@@ -113,29 +114,29 @@ def play(args):
             env.cfg.commands.resampling_time = 1e9
     except Exception:
         pass
-    # record initial command (use robot_index as reference)
+    
+    # Set initial commands immediately (before ramp starts)
+    # This ensures robot follows commands from the start
     try:
-        initial_lin_vel = float(env.commands[robot_index, 0].cpu().numpy())
+        env.commands[:, 0] = torch.full((env.num_envs,), float(initial_lin_vel), device=env.device)
+        env.commands[:, 1] = torch.full((env.num_envs,), 0.0, device=env.device)
+        env.commands[:, 2] = torch.full((env.num_envs,), 0.0, device=env.device)
     except Exception:
         try:
-            initial_lin_vel = float(env.commands[robot_index, 0].item())
+            env.commands[:, 0] = float(initial_lin_vel)
+            env.commands[:, 1] = 0.0
+            env.commands[:, 2] = 0.0
         except Exception:
-            initial_lin_vel = 0.0
+            pass
+    
+    # Update observations after setting initial commands
+    obs_dict = env.get_observations()
+    
     ramp_done = False
 
     for i in range(10*int(env.max_episode_length)):
-        actions = policy(obs_dict)
-        obs_dict, rews, dones, infos, _, _ = env.step(actions.detach())
-        if RECORD_FRAMES:
-            if i % 2:
-                filename = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported', 'frames', f"{img_idx}.png")
-                env.gym.write_viewer_image_to_file(env.viewer, filename)
-                img_idx += 1
-        if MOVE_CAMERA:
-            camera_position += camera_vel * env.dt
-            env.set_camera(camera_position, camera_position + camera_direction)
-
         # handle speed ramping (smooth change of desired linear velocity in X)
+        # UPDATE COMMANDS BEFORE POLICY INFERENCE SO OBSERVATIONS REFLECT NEW COMMAND
         if not ramp_done:
             current_time = i * env.dt
             if current_time >= ramp_start_s:
@@ -152,6 +153,17 @@ def play(args):
                 if frac >= 1.0:
                     ramp_done = True
                     print(f"Speed ramp complete: lin_vel_x -> {new_val} at t={current_time:.2f}s (i={i})")
+
+        actions = policy(obs_dict)
+        obs_dict, rews, dones, infos, _, _ = env.step(actions.detach())
+        if RECORD_FRAMES:
+            if i % 2:
+                filename = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported', 'frames', f"{img_idx}.png")
+                env.gym.write_viewer_image_to_file(env.viewer, filename)
+                img_idx += 1
+        if MOVE_CAMERA:
+            camera_position += camera_vel * env.dt
+            env.set_camera(camera_position, camera_position + camera_direction)
 
         if i < stop_state_log:
             # compute target and measured vectors only for selected DOFs
