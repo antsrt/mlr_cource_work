@@ -1,0 +1,5 @@
+struct foot_contact_t {
+    int64_t utime;      // ns
+    int16_t force[4];       // raw foot force sensors
+    int16_t force_est[4];   // estimated/contact inference
+}

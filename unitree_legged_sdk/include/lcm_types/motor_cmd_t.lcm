@@ -1,0 +1,8 @@
+struct motor_cmd_t {
+    int64_t utime;        // ns
+    float   q[12];        // desired pos
+    float   dq[12];       // desired vel
+    float   tau[12];      // feedforward torque
+    float   kp[12];       // gains
+    float   kd[12];       // gains
+}

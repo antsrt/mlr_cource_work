@@ -1,0 +1,7 @@
+struct motor_state_t {
+    int64_t utime;        // ns
+    float   q[12];        // rad
+    float   dq[12];       // rad/s
+    float   ddq[12];      // rad/s^2
+    float   tau_est[12];  // Nm
+}

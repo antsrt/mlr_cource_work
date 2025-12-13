@@ -1,0 +1,7 @@
+struct imu_state_t {
+    int64_t utime;      // ns
+    float   rpy[3];     // rad
+    float   omega[3];   // rad/s (gyroscope)
+    float   accel[3];   // m/s^2
+    float   alpha[3];   // rad/s^2 (estimated d(omega)/dt)
+}

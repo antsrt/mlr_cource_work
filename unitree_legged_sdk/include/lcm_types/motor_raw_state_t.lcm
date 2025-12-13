@@ -1,0 +1,7 @@
+struct motor_raw_state_t {
+    int64_t utime;        // ns
+    float   q_raw[12];    // rad
+    float   dq_raw[12];   // rad/s
+    float   ddq_raw[12];  // rad/s^2
+    int8_t  temperature[12]; // deg C, as in comm.h
+}
