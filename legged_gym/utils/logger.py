@@ -207,9 +207,9 @@ class Logger:
                     if names_list is not None and col < len(names_list):
                         name = names_list[col]
                     ax.plot(time, dof_pos_mat[:, col], color=color, linestyle='-', label=f'{name} (meas)')
-                    ax.plot(time, dof_target_mat[:, col], color=color, linestyle='--', label=f'{name} (tgt)')
+                    # ax.plot(time, dof_target_mat[:, col], color=color, linestyle='--', label=f'{name} (tgt)')
                 ax.set_ylabel('pos [rad]')
-                ax.set_title(f'Leg {leg}: measured vs target')
+                ax.set_title(f'Leg {leg}: measured')
                 try:
                     ax.legend(loc='upper right', fontsize='small')
                 except Exception:
@@ -228,7 +228,7 @@ class Logger:
             nfeet = contact_mat.shape[1]
             # default foot labels if 4 feet (common quadruped order FR, FL, RR, RL)
             if nfeet == 4:
-                foot_labels = ['FR_foot', 'FL_foot', 'RR_foot', 'RL_foot']
+                foot_labels = ['FL_foot', 'FR_foot', 'RR_foot', 'RL_foot']
             else:
                 foot_labels = [f'foot{i}' for i in range(nfeet)]
 
