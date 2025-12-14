@@ -1,0 +1,66 @@
+{
+  "train_cfg": {
+    "algorithm_class_name": "ResidualPPO",
+    "amp_num_preload_transitions": 1,
+    "checkpoint": 2000,
+    "experiment_name": "aliengo_residual",
+    "export_onnx_policy": false,
+    "export_policy": false,
+    "load_run": "residual_run_highspeed",
+    "max_iterations": 20000,
+    "num_steps_per_env": 24,
+    "policy_class_name": "ActorCriticResidual",
+    "resume": true,
+    "resume_path": null,
+    "run_name": "residual",
+    "save_interval": 200,
+    "warmup_iters": 3000,
+    "warmup_kl_coef": 0.01,
+    "warmup_l2_coef": 0.05,
+    "warmup_std": 0.35
+  },
+  "algorithm_cfg": {
+    "base_kl_coef": 0.02,
+    "clip_param": 0.2,
+    "desired_kl": 0.01,
+    "entropy_coef": 0.0,
+    "gamma": 0.99,
+    "lam": 0.95,
+    "learning_rate": 0.001,
+    "max_grad_norm": 1.0,
+    "num_learning_epochs": 5,
+    "num_mini_batches": 4,
+    "residual_l2_coef": 0.1,
+    "schedule": "fixed",
+    "use_clipped_value_loss": true,
+    "value_loss_coef": 1.0
+  },
+  "policy_cfg": {
+    "activate_actor_output": false,
+    "activation": "elu",
+    "actor_hidden_dims": [
+      512,
+      256,
+      128
+    ],
+    "base_checkpoint": "{LEGGED_GYM_ROOT_DIR}/logs/aliengo_amp/video_limp/model_25000.pt",
+    "critic_hidden_dims": [
+      512,
+      256,
+      128
+    ],
+    "init_noise_std": 1.0,
+    "policy_class_name": "ActorCriticResidual",
+    "residual_hidden_dims": [
+      256,
+      128
+    ],
+    "residual_scale": 1.0
+  },
+  "command_ranges": {
+    "ang_vel_yaw": "[-3.14, 3.14]",
+    "heading": "[-3.14, 3.14]",
+    "lin_vel_x": "[1.1, 3.0]",
+    "lin_vel_y": "[-1.5, 1.5]"
+  }
+}

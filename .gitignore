@@ -13,13 +13,11 @@ dist/
 *.egg-info/
 
 # Logs and outputs
-logs/aliengo_residual/
 logs_*/
 *.log
 
 # Torch/Isaac artifacts
 .cache/
-*.pt
 
 # IDE
 .vscode/
