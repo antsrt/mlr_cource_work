@@ -1,43 +1,102 @@
-# Learn from videos #
+# Управление четвероногим роботом базовой и residual RL-политикой (обновлено 2025-12-08)
 
-Codebase for the "Learning Aggressive Animal Locomotion Skills for Quadrupedal Robots Solely
-from Monocular Videos" project. This repository contains the code necessary to Aggressive skills using small amounts of video extract reference data .
+## Участники
+- ФИО студента 1  
+- ФИО студента 2  
+- ФИО студента 3  
 
-Experiments are performed using the Aliengo robot from Unitree. This repository is based off of Nikita Rudin's [legged_gym](https://github.com/leggedrobotics/legged_gym) repo and Alejandro Escontrela's [AMP_for_hardware](https://github.com/Alescontrela/AMP_for_hardware.git), and enables us to train policies using [Isaac Gym](https://developer.nvidia.com/isaac-gym).
+## Описание исследования
+Проект посвящён обучению политики ходьбы для четвероногого робота (Unitree Aliengo) в Isaac Gym. Базовая политика (AMP/BC) уверенно ходит до ~1.1 м/с. Residual-политика обучается добавлять корректирующее действие к базе, чтобы расширить диапазон скоростей вперёд/вбок и сохранить устойчивый трёхлапый паттерн. Репозиторий содержит:
+- Конфиги задач (база и residual) и скрипты запуска/обучения.
+- Реализацию ActorCriticResidual с замороженной базой и обучаемой residual-головой.
+- PPO-вариант с KL к базе и L2 на residual, логированием метрик и параметров запуска.
+- Скрипты инференса с ручной подачей команд и визуализацией трекинга скоростей/контактов.
 
-**Maintainer**: Liu ZHAO(zhaol@connect.hku.hk), Zeren LUO(zerluo@connect.hku.hk)
+Дополнительно: в `datasets/` лежат видеотреки для AMP, в `logs/` — чекпоинты обученных моделей (см. ниже).
 
-**Affiliation**: University of Hong Kong
-<p align="center">
-  <img src="img/output.gif" alt="Output GIF" width="800">
-</p>
+## Демонстрация работы (Видео)
+- Видео-демо: … (добавить ссылку на YouTube/Vimeo/облако)  
+- GIF/встроенное превью: … (добавить при наличии)
 
-### Fast start 
+## Установка и развертывание
+- Проверено на Linux, CUDA GPU (Isaac Gym), Python 3.8.20.
+- Требуемые системные компоненты: драйвер NVIDIA с поддержкой CUDA 12.x, библиотеки X11 (для рендера), установленный Isaac Gym (поставляется в репо в `isaacgym/`).
+- Создание окружения (Conda):
+  ```bash
+  conda env create -f environment.yml
+  conda activate mlr-project
+  pip install -e .
+  ```
+- Если нужно, доустановите системные зависимости X11: `sudo apt-get install libx11-dev libxau-dev libxdmcp-dev`.
 
-1. video motion data is in the folder "dataset/video_motion_***"
-2. The trained model can be found here:[model_25000.pt](logs/aliengo_amp/video_limp/model_25000.pt)
-   
-   put the logs in folder Imitation_from_video  like: Imitation_from_video/logs/aliengo_amp/video_XX
-3. Before training, change the motion data path as which motion to learn in /legged_gym/envs/aliengo/aliengo_amp_config.py
-   - `MOTION_FILES = glob.glob('datasets/video_motion_limp_aliengo/*')`
-4. Test by vis.sh
-   - `./legged_gym/scripts/aliengo_sh/proprio_base/vis.sh video_limp`
-5. Train by train.sh
-   - `./legged_gym/scripts/aliengo_sh/proprio_base/train.sh 0 0 video_test`
-     
-### Demo
+## Запуск и использование
+- Обучение базовой residual-политики:
+  ```bash
+  python legged_gym/scripts/train.py \
+    --task aliengo_residual \
+    --output_name <run_name> \
+    --rl_device cuda:0 \
+    --headless
+  # для продолжения: добавьте --resume --load_run <run_name> --checkpoint <N>
+  ```
+- Инференс (ручные команды, один робот):
+  ```bash
+  python legged_gym/scripts/play_manual.py \
+    --task aliengo_residual \
+    --output_name <run_name> \
+    --load_run <run_name> \
+    --checkpoint <N> \
+    --headless
+  ```
+  Скрипт логирует трекинг скоростей в `logs/vel_tracking.png` и графики по суставам/контактам (через Logger).
+- Тренировка базовой AMP-политики (пример):
+  ```bash
+  python legged_gym/scripts/train.py \
+    --task aliengo_amp \
+    --output_name <run_name> \
+    --rl_device cuda:0 \
+    --headless
+  ```
+- Инференс базовой политики:
+  ```bash
+  python legged_gym/scripts/play_manual.py \
+    --task aliengo_amp \
+    --output_name <run_name> \
+    --load_run <run_name> \
+    --checkpoint <N>
+  ```
 
-Backflip result:
+## Описание полученных результатов
+- Цель: расширить диапазон скоростей вперёд/вбок при сохранении устойчивого паттерна. База стабильна до ~1.1 м/с; residual тянет выше за счёт корректирующих действий.
+- Артефакты:
+  - Чекпоинты (пример): `logs/aliengo_amp/video_limp/model_25000.pt` (база), `logs/aliengo_residual/<run_name>/model_*.pt` (residual).
+  - Графики трекинга скоростей: `logs/vel_tracking.png` (генерируется `play_manual.py`).
+  - Параметры обучения: `logs/aliengo_residual/<run_name>/params.json`, метрики в `metrics.csv`.
+- Сырые данные: видео-траектории для AMP в `datasets/video_motion_limp_aliengo/…`. Добавьте ссылку/описание облачной папки: … (путь/URL, что есть что).
 
-<p align="center">
-  <img src="img/bk_realwithgazabo.png" alt="Backflip" width="800">
-</p>
+## Управление зависимостями
+- Основной файл окружения: `environment.yml` (Conda).
+- Установка пакета: `pip install -e .` из корня репозитория.
+- Isaac Gym поставляется внутри `isaacgym/` (без отдельной загрузки).
 
-### Installation ###
+## Структура проекта
+```
+Imitation_from_video/
+  README.md                <-- этот файл
+  environment.yml          <-- описание окружения (Conda)
+  legged_gym/              <-- задачи, конфиги, скрипты запуска (train/play)
+    envs/                  <-- среды (Aliengo AMP/residual и др.)
+    scripts/               <-- play.py, play_manual.py, train.py, shell-скрипты
+  rl/, rsl_rl/             <-- алгоритмы PPO/ResidualPPO, модули actor-critic
+  datasets/                <-- видеотреки/AMP-траектории (локальные примеры)
+  resources/, third_party/ <-- модели, вспомогательные ресурсы, внешние зависимости
+  logs/                    <-- чекпоинты обученных политик, метрики
+  unitree_legged_sdk/      <-- SDK для работы с роботом
+```
+Папки `models/`, `data/` не используются явно; веса и датасеты лежат в `logs/` и `datasets/`. При необходимости создайте отдельные каталоги с инструкциями.
 
-Refer the AMP_for_hardware https://github.com/Alescontrela/AMP_for_hardware.git
-
-### License
+## Лицензия
+BSD-3-Clause (см. LICENSE).
 
 The source code of this package is released under [GPLv2](https://www.gnu.org/licenses/) license. We only allow it free for academic usage with several patents. 
 For commercial use or cooperation, please contact Dr. Peng Lu lupeng@hku.hk.
