@@ -13,25 +13,13 @@
 - PPO-вариант с KL к базе и L2 на residual, логированием метрик и параметров запуска.
 - Скрипты инференса с ручной подачей команд и визуализацией трекинга скоростей/контактов.
 
-Дополнительно: в `datasets/` лежаn данные для AMP, в `logs/` — чекпоинты обученных моделей (см. ниже).
+Дополнительно: в `datasets/` лежат данные для AMP, в `logs/` — чекпоинты обученных моделей (см. ниже).
 
 ## Теория (AMP / BC база)
 
 - **AMP (Adversarial Motion Prior):** дискриминатор отличает expert-траектории mocap от траекторий политики; его выход используется как dense-награда.
 
-$$
-r_{\text{AMP}}
-=
-\alpha
-\left(
-1
--
-\tfrac{1}{4}
-\left(D(s,s') - 1\right)^2
-\right),
-\qquad
-D = \text{Discr}(s,s')
-$$
+$$ r_{\text{AMP}} = \alpha \left( 1 - \tfrac{1}{4} (D(s,s') - 1)^2 \right), \qquad D = \text{Discr}(s,s') $$
 
 Используется градиентный штраф на экспертных сэмплах.
 
@@ -47,101 +35,36 @@ $$
 
 - **Итоговое действие:**
 
-$$
-a
-=
-\mu_{\text{base}}(s)
-+
-\mu_{\text{res}}(s)
-+
-\varepsilon,
-\qquad
-\varepsilon \sim \mathcal{N}(0, \sigma_{\text{res}}^2)
-$$
+$$ a = \mu_{\text{base}}(s) + \mu_{\text{res}}(s) + \varepsilon, \qquad \varepsilon \sim \mathcal{N}(0, \sigma_{\text{res}}^2) $$
 
 Базовая политика заморожена, стохастичность добавляется только в residual.
 
 - **KL-дивергенция к базовой политике**  
 (активируется при высокой команде скорости):
 
-$$
-\|v_{\text{cmd},xy}\| > v_{\text{thr}}
-$$
+$$ \|v_{\text{cmd},xy}\| > v_{\text{thr}} $$
 
-$$
-L_{\text{KL}}
-=
-\mathbb{E}_{\text{mask}}
-\left[
-\sum_i
-\left(
-\log \frac{\sigma_i}{\sigma_i^b}
-+
-\frac{(\sigma_i^b)^2 + (\mu_i^b - \mu_i)^2}{2\sigma_i^2}
--
-\tfrac{1}{2}
-\right)
-\right]
-$$
+$$ L_{\text{KL}} = \mathbb{E}_{\text{mask}}\!\left[\sum_i \left( \log \frac{\sigma_i}{\sigma_i^b} + \frac{(\sigma_i^b)^2 + (\mu_i^b - \mu_i)^2}{2\sigma_i^2} - \tfrac{1}{2} \right) \right] $$
 
 - **L2-регуляризация residual** (ограничивает величину поправки):
 
-$$
-L_{L2}
-=
-\mathbb{E}\!\left[\|\mu - \mu^b\|_2^2\right]
-=
-\mathbb{E}\!\left[\|\mu_{\text{res}}\|_2^2\right]
-$$
+$$ L_{L2} = \mathbb{E}\!\left[\|\mu - \mu^b\|_2^2\right] = \mathbb{E}\!\left[\|\mu_{\text{res}}\|_2^2\right] $$
 
 - **Итоговый лосс residual-обучения:**
 
-$$
-L
-=
-L_{\text{PPO}}
-+
-\lambda_{\text{KL}} L_{\text{KL}}
-+
-\lambda_{L2} L_{L2}
-$$
+$$ L = L_{\text{PPO}} + \lambda_{\text{KL}} L_{\text{KL}} + \lambda_{L2} L_{L2} $$
 
-$$
-L_{\text{PPO}}
-=
-L_{\text{clip}}
-+
-c_1 L_{\text{value}}
--
-c_2 L_{\text{entropy}}
-$$
+$$ L_{\text{PPO}} = L_{\text{clip}} + c_1 L_{\text{value}} - c_2 L_{\text{entropy}} $$
 
 - **Warmup-стратегия:**
 
-$$
-\sigma_{\text{res}} \uparrow,
-\qquad
-\lambda_{\text{KL}},\; \lambda_{L2} \downarrow
-$$
+$$ \sigma_{\text{res}} \uparrow, \qquad \lambda_{\text{KL}},\; \lambda_{L2} \downarrow $$
 
-$$
-\text{after warmup: }
-\sigma_{\text{res}},\;
-\lambda_{\text{KL}},\;
-\lambda_{L2}
-\;\rightarrow\;
-\text{base values}
-$$
+$$ \text{after warmup: } \sigma_{\text{res}},\; \lambda_{\text{KL}},\; \lambda_{L2} \rightarrow \text{base values} $$
 
 - **Диапазон команд residual-обучения** (без curriculum):
 
-$$
-v_x \in [1.1,\;3.0],
-\qquad
-v_y \in [-1.5,\;1.5],
-\qquad
-\omega_z \in [-3.14,\;3.14]
-$$
+$$ v_x \in [1.1,\;3.0], \qquad v_y \in [-1.5,\;1.5], \qquad \omega_z \in [-3.14,\;3.14] $$
 
 Обучение проводится сразу в режиме высоких скоростей, где базовая политика деградирует.
 
