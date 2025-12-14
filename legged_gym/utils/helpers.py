@@ -205,6 +205,22 @@ def get_args():
          "help": "whether or not convert the network to jit(C++)."},
         {"name": "--export_onnx_policy", "action": "store_true", "default": False,
          "help": "whether or not convert the network to onnx(C++)."},
+        
+        # === Gait recording & comparison (custom) ===
+        {"name": "--save_gait", "action": "store_true", "default": False,
+         "help": "Save joint trajectories during rollout"},
+        
+        {"name": "--gait_velocity", "type": float, "default": 1.0,
+         "help": "Target forward velocity for gait recording (m/s)"},
+        
+        {"name": "--compare_gaits", "action": "store_true", "default": False,
+         "help": "Compare two recorded gaits"},
+        
+        {"name": "--gait_file1", "type": str, "default": None,
+         "help": "First gait file (.pkl)"},
+        
+        {"name": "--gait_file2", "type": str, "default": None,
+         "help": "Second gait file (.pkl)"},
 
         # ! selection of the algorithm
         {"name": "--runner_class_name", "type": str, "default": "debug", "help": "which algorithm / runner you select"},
